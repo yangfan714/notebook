@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>添加任务</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .task-form-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 2rem;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid var(--neon-blue);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 195, 255, 0.3);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 1;
+        }
+
+        .task-form-title {
+            color: var(--neon-pink);
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px var(--neon-pink);
+            letter-spacing: 3px;
+        }
+
+        .form-label {
+            color: var(--neon-blue);
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            letter-spacing: 1px;
+        }
+
+        .form-control {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-white);
+            padding: 0.8rem;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            background: rgba(0, 0, 0, 0.7);
+            border-color: var(--neon-pink);
+            box-shadow: 0 0 10px rgba(255, 0, 128, 0.3);
+            color: var(--neon-white);
+        }
+
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .btn-submit {
+            background: linear-gradient(45deg, var(--neon-blue), var(--neon-pink));
+            border: none;
+            color: white;
+            padding: 0.8rem 2rem;
+            border-radius: 5px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(0, 195, 255, 0.5);
+        }
+
+        .btn-back {
+            background: transparent;
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 0.8rem 2rem;
+            border-radius: 5px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .btn-back:hover {
+            background: var(--neon-blue);
+            color: var(--neon-black);
+            transform: translateY(-2px);
+            box-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .error-message {
+            color: var(--neon-red);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            text-shadow: 0 0 5px var(--neon-red);
+        }
+
+        .priority-select {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-white);
+            padding: 0.8rem;
+            border-radius: 5px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .priority-select:focus {
+            border-color: var(--neon-pink);
+            box-shadow: 0 0 10px rgba(255, 0, 128, 0.3);
+        }
+
+        .priority-select option {
+            background: rgba(0, 0, 0, 0.9);
+            color: var(--neon-white);
+        }
+
+        .date-input {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-white);
+            padding: 0.8rem;
+            border-radius: 5px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .date-input:focus {
+            border-color: var(--neon-pink);
+            box-shadow: 0 0 10px rgba(255, 0, 128, 0.3);
+        }
+    </style>
+</head>
+<body class="cyberpunk-bg">
+    <div id="particles-js"></div>
+    <div class="container">
+        <div class="task-form-container">
+            <h1 class="task-form-title">添加新任务</h1>
+            <form th:action="@{/task/add}" method="post" th:object="${task}">
+                <div class="form-group">
+                    <label for="title" class="form-label">标题</label>
+                    <input type="text" class="form-control" id="title" th:field="*{title}" required
+                           placeholder="输入任务标题">
+                    <div class="error-message" th:if="${#fields.hasErrors('title')}" 
+                         th:errors="*{title}"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="priority" class="form-label">优先级</label>
+                    <select class="priority-select" id="priority" th:field="*{priority}" required>
+                        <option value="1">低</option>
+                        <option value="2">中</option>
+                        <option value="3">高</option>
+                    </select>
+                    <div class="error-message" th:if="${#fields.hasErrors('priority')}" 
+                         th:errors="*{priority}"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="dueDate" class="form-label">截止日期</label>
+                    <input type="date" class="date-input" id="dueDate" th:field="*{dueDate}" required>
+                    <div class="error-message" th:if="${#fields.hasErrors('dueDate')}" 
+                         th:errors="*{dueDate}"></div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <button type="submit" class="btn btn-submit">
+                            <i class="fas fa-save"></i> 保存任务
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <a th:href="@{/task/list}" class="btn btn-back">
+                            <i class="fas fa-arrow-left"></i> 返回列表
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script>
+        particlesJS.load('particles-js', '/js/particles.json', function() {
+            console.log('particles.js loaded - callback');
+        });
+
+        // 设置日期输入的最小值为今天
+        document.getElementById('dueDate').min = new Date().toISOString().split('T')[0];
+    </script>
+</body>
+</html> 

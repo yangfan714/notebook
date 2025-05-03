@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>任务列表</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .task-card {
+            margin-bottom: 1rem;
+            border-left: 4px solid #dee2e6;
+        }
+        .task-card.high-priority {
+            border-left-color: #dc3545;
+        }
+        .task-card.medium-priority {
+            border-left-color: #ffc107;
+        }
+        .task-card.low-priority {
+            border-left-color: #28a745;
+        }
+        .task-card.completed {
+            border-left-color: #6c757d;
+        }
+        .task-card.expired {
+            border-left-color: #dc3545;
+        }
+        .countdown {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .countdown.expired {
+            color: #dc3545;
+        }
+        .task-actions {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .task-card:hover .task-actions {
+            opacity: 1;
+        }
+        .description-preview {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        .priority-badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>任务列表</h2>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+                <i class="bi bi-plus-lg"></i> 新建任务
+            </button>
+        </div>
+
+        <!-- 任务分类标签页 -->
+        <ul class="nav nav-tabs mb-4" id="taskTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="high-priority-tab" data-bs-toggle="tab" data-bs-target="#high-priority" type="button" role="tab">
+                    高优先级
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="medium-low-priority-tab" data-bs-toggle="tab" data-bs-target="#medium-low-priority" type="button" role="tab">
+                    中低优先级
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="expired-tab" data-bs-toggle="tab" data-bs-target="#expired" type="button" role="tab">
+                    已逾期
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab">
+                    已完成
+                </button>
+            </li>
+        </ul>
+
+        <!-- 任务列表内容 -->
+        <div class="tab-content" id="taskTabsContent">
+            <div class="tab-pane fade show active" id="high-priority" role="tabpanel"></div>
+            <div class="tab-pane fade" id="medium-low-priority" role="tabpanel"></div>
+            <div class="tab-pane fade" id="expired" role="tabpanel"></div>
+            <div class="tab-pane fade" id="completed" role="tabpanel"></div>
+        </div>
+    </div>
+
+    <!-- 新建任务模态框 -->
+    <div class="modal fade" id="addTaskModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">新建任务</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addTaskForm">
+                        <div class="mb-3">
+                            <label class="form-label">标题</label>
+                            <input type="text" class="form-control" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">描述</label>
+                            <textarea class="form-control" name="description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">截止日期</label>
+                            <input type="datetime-local" class="form-control" name="dueDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">优先级</label>
+                            <select class="form-select" name="priority" required>
+                                <option value="3">高</option>
+                                <option value="2">中</option>
+                                <option value="1">低</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="addTask()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑截止日期模态框 -->
+    <div class="modal fade" id="editDueDateModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">修改截止日期</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editDueDateForm">
+                        <input type="hidden" id="editTaskId">
+                        <div class="mb-3">
+                            <label class="form-label">新的截止日期</label>
+                            <input type="datetime-local" class="form-control" id="newDueDate" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="updateDueDate()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 页面加载完成后加载任务
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTasks();
+            // 设置定时刷新
+            setInterval(loadTasks, 60000); // 每分钟刷新一次
+        });
+
+        // 加载所有任务
+        function loadTasks() {
+            loadHighPriorityTasks();
+            loadMediumLowPriorityTasks();
+            loadExpiredTasks();
+            loadCompletedTasks();
+        }
+
+        // 加载高优先级任务
+        function loadHighPriorityTasks() {
+            fetch('/api/tasks/high-priority')
+                .then(response => response.json())
+                .then(tasks => {
+                    const container = document.getElementById('high-priority');
+                    renderTasks(tasks, container);
+                });
+        }
+
+        // 加载中低优先级任务
+        function loadMediumLowPriorityTasks() {
+            fetch('/api/tasks/medium-low-priority')
+                .then(response => response.json())
+                .then(tasks => {
+                    const container = document.getElementById('medium-low-priority');
+                    renderTasks(tasks, container);
+                });
+        }
+
+        // 加载已逾期任务
+        function loadExpiredTasks() {
+            fetch('/api/tasks/expired')
+                .then(response => response.json())
+                .then(tasks => {
+                    const container = document.getElementById('expired');
+                    renderTasks(tasks, container);
+                });
+        }
+
+        // 加载已完成任务
+        function loadCompletedTasks() {
+            fetch('/api/tasks/completed')
+                .then(response => response.json())
+                .then(tasks => {
+                    const container = document.getElementById('completed');
+                    renderTasks(tasks, container);
+                });
+        }
+
+        // 渲染任务列表
+        function renderTasks(tasks, container) {
+            container.innerHTML = '';
+            tasks.forEach(task => {
+                const taskElement = createTaskElement(task);
+                container.appendChild(taskElement);
+            });
+        }
+
+        // 创建任务元素
+        function createTaskElement(task) {
+            const div = document.createElement('div');
+            div.className = `card task-card ${getPriorityClass(task.priority)} ${task.completed ? 'completed' : ''} ${isExpired(task) ? 'expired' : ''}`;
+            
+            const priorityText = getPriorityText(task.priority);
+            const countdown = getCountdown(task);
+            
+            div.innerHTML = `
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="card-title mb-1">
+                                ${task.completed ? '<i class="bi bi-check-circle-fill text-success me-2"></i>' : ''}
+                                ${task.title}
+                            </h5>
+                            <span class="badge bg-${getPriorityColor(task.priority)} priority-badge">${priorityText}</span>
+                            <div class="countdown ${isExpired(task) ? 'expired' : ''}">${countdown}</div>
+                        </div>
+                        <div class="task-actions">
+                            ${!task.completed ? `
+                                <button class="btn btn-sm btn-outline-success me-1" onclick="markAsCompleted(${task.id})">
+                                    <i class="bi bi-check-lg"></i>
+                                </button>
+                            ` : `
+                                <button class="btn btn-sm btn-outline-secondary me-1" onclick="markAsUncompleted(${task.id})">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            `}
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="showEditDueDateModal(${task.id})">
+                                <i class="bi bi-calendar"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteTask(${task.id})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    ${task.description ? `
+                        <div class="description-preview">${task.description}</div>
+                    ` : ''}
+                </div>
+            `;
+            
+            return div;
+        }
+
+        // 获取优先级样式类
+        function getPriorityClass(priority) {
+            switch(priority) {
+                case 3: return 'high-priority';
+                case 2: return 'medium-priority';
+                case 1: return 'low-priority';
+                default: return '';
+            }
+        }
+
+        // 获取优先级文本
+        function getPriorityText(priority) {
+            switch(priority) {
+                case 3: return '高优先级';
+                case 2: return '中优先级';
+                case 1: return '低优先级';
+                default: return '未知';
+            }
+        }
+
+        // 获取优先级颜色
+        function getPriorityColor(priority) {
+            switch(priority) {
+                case 3: return 'danger';
+                case 2: return 'warning';
+                case 1: return 'success';
+                default: return 'secondary';
+            }
+        }
+
+        // 计算倒计时
+        function getCountdown(task) {
+            if (task.completed) {
+                return '已完成';
+            }
+            
+            const dueDate = new Date(task.dueDate);
+            const now = new Date();
+            
+            if (dueDate < now) {
+                return '已逾期';
+            }
+            
+            const diff = dueDate - now;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            
+            if (days > 0) {
+                return `剩余 ${days} 天 ${hours} 小时`;
+            } else if (hours > 0) {
+                return `剩余 ${hours} 小时 ${minutes} 分钟`;
+            } else {
+                return `剩余 ${minutes} 分钟`;
+            }
+        }
+
+        // 检查任务是否已逾期
+        function isExpired(task) {
+            if (task.completed) return false;
+            const dueDate = new Date(task.dueDate);
+            const now = new Date();
+            return dueDate < now;
+        }
+
+        // 添加新任务
+        function addTask() {
+            const form = document.getElementById('addTaskForm');
+            const formData = new FormData(form);
+            const task = {
+                title: formData.get('title'),
+                description: formData.get('description'),
+                dueDate: formData.get('dueDate'),
+                priority: parseInt(formData.get('priority')),
+                completed: false
+            };
+
+            fetch('/api/tasks', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(task)
+            })
+            .then(response => {
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('addTaskModal')).hide();
+                    form.reset();
+                    loadTasks();
+                }
+            });
+        }
+
+        // 标记任务为已完成
+        function markAsCompleted(taskId) {
+            fetch(`/api/tasks/${taskId}/complete`, {
+                method: 'PUT'
+            })
+            .then(response => {
+                if (response.ok) {
+                    loadTasks();
+                }
+            });
+        }
+
+        // 标记任务为未完成
+        function markAsUncompleted(taskId) {
+            fetch(`/api/tasks/${taskId}/uncomplete`, {
+                method: 'PUT'
+            })
+            .then(response => {
+                if (response.ok) {
+                    loadTasks();
+                }
+            });
+        }
+
+        // 删除任务
+        function deleteTask(taskId) {
+            if (confirm('确定要删除这个任务吗？')) {
+                fetch(`/api/tasks/${taskId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => {
+                    if (response.ok) {
+                        loadTasks();
+                    }
+                });
+            }
+        }
+
+        // 显示编辑截止日期模态框
+        function showEditDueDateModal(taskId) {
+            document.getElementById('editTaskId').value = taskId;
+            const modal = new bootstrap.Modal(document.getElementById('editDueDateModal'));
+            modal.show();
+        }
+
+        // 更新截止日期
+        function updateDueDate() {
+            const taskId = document.getElementById('editTaskId').value;
+            const newDueDate = document.getElementById('newDueDate').value;
+
+            fetch(`/api/tasks/${taskId}/due-date`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ dueDate: newDueDate })
+            })
+            .then(response => {
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('editDueDateModal')).hide();
+                    document.getElementById('editDueDateForm').reset();
+                    loadTasks();
+                }
+            });
+        }
+    </script>
+</body>
+</html> 

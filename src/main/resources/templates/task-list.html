@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <title>任务列表 - 任务管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-blue: #00c3ff;
+            --neon-pink: #ff00ff;
+            --neon-green: #00ff9f;
+            --neon-yellow: #ffd700;
+            --neon-red: #ff3c3c;
+            --glass-bg: rgba(0, 0, 0, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --mobile-padding: 0.5rem;
+            --tablet-padding: 1rem;
+            --desktop-padding: 2rem;
+        }
+
+        body {
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .task-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: var(--desktop-padding);
+            box-shadow: 0 0 20px rgba(0, 195, 255, 0.2);
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .task-title {
+            font-family: 'KaiTi', 'Share Tech Mono', monospace;
+            font-size: 1.2rem;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0.5rem;
+            transition: all 0.3s ease;
+            display: inline-block;
+            position: relative;
+            text-align: left;
+            text-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+            letter-spacing: 1px;
+            max-width: 100%;
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .task-title:hover {
+            color: var(--neon-blue);
+            text-shadow: 0 0 5px var(--neon-blue),
+                         0 0 10px rgba(0, 195, 255, 0.3);
+            transform: translateX(5px);
+        }
+
+        .task-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255, 255, 255, 0.2) 25%, 
+                rgba(0, 195, 255, 0.6) 50%, 
+                rgba(255, 255, 255, 0.2) 75%, 
+                transparent 100%);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite linear;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .page-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            color: var(--neon-blue);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 2rem;
+            text-shadow: 0 0 10px var(--neon-blue);
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            text-align: center;
+        }
+
+        .page-title::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--neon-blue);
+            box-shadow: 0 0 10px var(--neon-blue);
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        .table {
+            table-layout: fixed;
+            width: 100%;
+            margin-bottom: 1rem;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+            margin-top: -8px;
+        }
+
+        .table th,
+        .table td {
+            padding: 1rem;
+            vertical-align: middle;
+            border-color: rgba(0, 195, 255, 0.2);
+            text-align: center;
+            background: rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 设置每列的固定宽度 */
+        .table th:nth-child(1),
+        .table td:nth-child(1) {
+            width: 30%;  /* 任务名称列 */
+        }
+
+        .table th:nth-child(2),
+        .table td:nth-child(2) {
+            width: 15%;  /* 优先级列 */
+        }
+
+        .table th:nth-child(3),
+        .table td:nth-child(3) {
+            width: 25%;  /* 截止时间列 */
+        }
+
+        .table th:nth-child(4),
+        .table td:nth-child(4) {
+            width: 15%;  /* 描述列 */
+        }
+
+        .table th:nth-child(5),
+        .table td:nth-child(5) {
+            width: 15%;  /* 操作列 */
+        }
+
+        .priority-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .priority-high {
+            background: rgba(255, 60, 60, 0.1);
+            border: 2px solid rgba(255, 60, 60, 0.5);
+        }
+
+        .priority-high::before {
+            content: '!!!';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--neon-red);
+            font-weight: bold;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px var(--neon-red);
+            animation: pulseText 2s infinite;
+        }
+
+        .priority-medium {
+            background: rgba(255, 215, 0, 0.1);
+            border: 2px solid rgba(255, 215, 0, 0.5);
+        }
+
+        .priority-medium::before {
+            content: '!!';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--neon-yellow);
+            font-weight: bold;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px var(--neon-yellow);
+            animation: pulseText 2s infinite;
+        }
+
+        .priority-low {
+            background: rgba(0, 255, 159, 0.1);
+            border: 2px solid rgba(0, 255, 159, 0.5);
+        }
+
+        .priority-low::before {
+            content: '!';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--neon-green);
+            font-weight: bold;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px var(--neon-green);
+            animation: pulseText 2s infinite;
+        }
+
+        .priority-badge::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(
+                transparent,
+                rgba(255, 255, 255, 0.1),
+                transparent 30%
+            );
+            animation: rotate 4s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulseText {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.95); }
+            100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .countdown {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            display: inline-block;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 150px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .countdown::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(
+                transparent,
+                rgba(255, 255, 255, 0.1),
+                transparent 30%
+            );
+            animation: rotate 4s linear infinite;
+        }
+
+        .countdown-overdue {
+            color: var(--neon-red);
+            text-decoration: line-through;
+            animation: blink 1s infinite;
+            border-color: rgba(255, 60, 60, 0.3);
+        }
+
+        .countdown-today {
+            color: var(--neon-red);
+            font-weight: bold;
+            border-color: rgba(255, 60, 60, 0.3);
+            text-shadow: 0 0 5px rgba(255, 60, 60, 0.5);
+        }
+
+        .countdown-tomorrow {
+            color: var(--neon-yellow);
+            border-color: rgba(255, 215, 0, 0.3);
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+        }
+
+        .countdown-soon {
+            color: var(--neon-yellow);
+            border-color: rgba(255, 215, 0, 0.3);
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+        }
+
+        .countdown-normal {
+            color: var(--neon-green);
+            border-color: rgba(0, 255, 159, 0.3);
+            text-shadow: 0 0 5px rgba(0, 255, 159, 0.5);
+        }
+
+        .btn {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border: none;
+            border-radius: 5px;
+            padding: 0.5rem 1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            margin: 0.2rem;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        .btn-primary:hover {
+            background: #00a3cc;
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px var(--neon-blue);
+        }
+
+        .btn-success {
+            background: var(--neon-green);
+            color: #000;
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        .btn-success:hover {
+            background: #00cc7f;
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px var(--neon-green);
+        }
+
+        .btn-danger {
+            background: var(--neon-red);
+            color: #000;
+            box-shadow: 0 0 10px var(--neon-red);
+        }
+
+        .btn-danger:hover {
+            background: #cc3030;
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px var(--neon-red);
+        }
+
+        .countdown {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.9rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .countdown-overdue {
+            color: var(--neon-red);
+            text-decoration: line-through;
+            animation: blink 1s infinite;
+        }
+
+        .countdown-today {
+            color: var(--neon-red);
+            font-weight: bold;
+        }
+
+        .countdown-tomorrow {
+            color: var(--neon-yellow);
+        }
+
+        .countdown-soon {
+            color: var(--neon-yellow);
+        }
+
+        .countdown-normal {
+            color: var(--neon-green);
+        }
+
+        @keyframes glow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        #particles-js {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        @media (max-width: 768px) {
+            .task-container {
+                padding: var(--mobile-padding);
+                margin: 0.5rem;
+                border-radius: 10px;
+            }
+            
+            .page-title {
+                font-size: 1.5rem;
+                margin-bottom: 1rem;
+            }
+            
+            .table {
+                display: block;
+                border-spacing: 0;
+            }
+
+            .table thead {
+                display: none; /* 隐藏表头 */
+            }
+
+            .table tbody {
+                display: block;
+            }
+
+            .table tr {
+                display: block;
+                margin-bottom: 1rem;
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 8px;
+                padding: 0.5rem;
+            }
+
+            .table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.5rem;
+                border: none;
+                background: none;
+                text-align: right;
+                margin-bottom: 0.25rem;
+            }
+
+            .table td::before {
+                content: attr(data-label);
+                font-weight: bold;
+                text-align: left;
+                color: var(--neon-blue);
+            }
+
+            .task-title {
+                font-size: 1rem;
+                margin: 0;
+                text-align: left;
+                width: 100%;
+            }
+
+            .action-buttons {
+                display: flex;
+                justify-content: flex-end;
+                gap: 0.5rem;
+            }
+
+            .priority-badge {
+                width: 30px;
+                height: 30px;
+                font-size: 1rem;
+            }
+
+            .description-btn {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.9rem;
+            }
+
+            .countdown {
+                font-size: 0.8rem;
+                padding: 0.25rem 0.5rem;
+                min-width: auto;
+            }
+        }
+
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .task-container {
+                padding: var(--tablet-padding);
+                margin: 1rem;
+            }
+
+            .page-title {
+                font-size: 1.75rem;
+            }
+
+            .table th,
+            .table td {
+                padding: 0.75rem;
+            }
+
+            .task-title {
+                font-size: 1rem;
+            }
+
+            .priority-badge {
+                width: 35px;
+                height: 35px;
+            }
+        }
+
+        .pagination-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .pagination-container {
+                gap: 0.25rem;
+            }
+
+            .page-btn {
+                width: 32px;
+                height: 32px;
+                font-size: 0.9rem;
+            }
+        }
+
+        .priority-filter {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .priority-filter {
+                gap: 0.25rem;
+            }
+
+            .priority-btn {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        .modal-content {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            color: #fff;
+            box-shadow: 0 0 20px rgba(0, 195, 255, 0.3);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid var(--glass-border);
+            padding: 1rem 1.5rem;
+        }
+
+        .modal-title {
+            color: var(--neon-blue);
+            font-family: 'Orbitron', sans-serif;
+            text-shadow: 0 0 5px var(--neon-blue);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .description-textarea {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            color: #fff;
+            padding: 1rem;
+            border-radius: 8px;
+            width: 100%;
+            min-height: 200px;
+            resize: vertical;
+            font-family: 'Share Tech Mono', monospace;
+            transition: all 0.3s ease;
+        }
+
+        .description-textarea:focus {
+            outline: none;
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 10px rgba(0, 195, 255, 0.3);
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--glass-border);
+            padding: 1rem 1.5rem;
+        }
+
+        .btn-close {
+            color: #fff;
+            text-shadow: none;
+            opacity: 0.7;
+        }
+
+        .btn-close:hover {
+            opacity: 1;
+        }
+
+        .description-btn {
+            background: transparent;
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .description-btn:hover {
+            background: var(--neon-blue);
+            color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        .btn-action {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            border: none;
+            margin: 0 5px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .btn-action::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .btn-complete {
+            color: var(--neon-green);
+        }
+
+        .btn-complete::before {
+            border-color: var(--neon-green);
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        .btn-complete:hover {
+            transform: scale(1.1);
+            text-shadow: 0 0 10px var(--neon-green);
+        }
+
+        .btn-complete:hover::before {
+            transform: scale(1.2);
+            border-color: transparent;
+            box-shadow: 0 0 20px var(--neon-green);
+        }
+
+        .btn-delete {
+            color: var(--neon-red);
+        }
+
+        .btn-delete::before {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 10px var(--neon-red);
+        }
+
+        .btn-delete:hover {
+            transform: scale(1.1);
+            text-shadow: 0 0 10px var(--neon-red);
+        }
+
+        .btn-delete:hover::before {
+            transform: scale(1.2);
+            border-color: transparent;
+            box-shadow: 0 0 20px var(--neon-red);
+        }
+
+        .btn-action i {
+            position: relative;
+            z-index: 1;
+            font-size: 1rem;
+        }
+
+        .btn-action:hover i {
+            animation: pulse 1s infinite;
+        }
+
+        .table tr {
+            transition: all 0.3s ease;
+        }
+
+        .table tr:hover td {
+            background: rgba(0, 195, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .table tr td:first-child {
+            border-top-left-radius: 8px;
+            border-bottom-left-radius: 8px;
+        }
+
+        .table tr td:last-child {
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+
+        .table thead th {
+            border-bottom: none;
+            color: var(--neon-blue);
+            font-size: 1rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .table thead th::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg,
+                transparent,
+                var(--neon-blue),
+                transparent);
+            animation: glow 2s infinite linear;
+        }
+
+        .priority-btn {
+            padding: 8px 16px;
+            border: 2px solid transparent;
+            border-radius: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .priority-btn::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border-radius: 20px;
+            background: linear-gradient(45deg, 
+                var(--neon-blue), 
+                var(--neon-pink), 
+                var(--neon-blue));
+            background-size: 200% 200%;
+            z-index: -1;
+            animation: gradient 3s ease infinite;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .priority-btn:hover::before,
+        .priority-btn.active::before {
+            opacity: 1;
+        }
+
+        .priority-btn.active {
+            background: rgba(0, 195, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .page-btn {
+            width: 40px;
+            height: 40px;
+            border: 2px solid var(--neon-blue);
+            border-radius: 50%;
+            background: transparent;
+            color: var(--neon-blue);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--neon-blue);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: -1;
+        }
+
+        .page-btn:hover::before,
+        .page-btn.active::before {
+            opacity: 0.1;
+        }
+
+        .page-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        .page-btn.active {
+            background: var(--neon-blue);
+            color: #000;
+            font-weight: bold;
+        }
+
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: rgba(0, 195, 255, 0.3);
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 桌面端表格（默认隐藏在移动端） */
+        .desktop-view {
+            display: block;
+        }
+
+        /* 移动端卡片视图（默认隐藏在桌面端） */
+        .mobile-view {
+            display: none;
+        }
+
+        /* 移动端卡片样式 */
+        .task-card {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .task-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--neon-blue), transparent);
+        }
+
+        .task-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .task-card-title {
+            font-size: 1.1rem;
+            color: var(--neon-blue);
+            margin: 0;
+            flex: 1;
+            padding-right: 1rem;
+        }
+
+        .task-card-priority {
+            flex-shrink: 0;
+        }
+
+        .task-card-body {
+            margin-bottom: 0.8rem;
+        }
+
+        .task-card-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .task-card-label {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+        }
+
+        .task-card-value {
+            color: #fff;
+            font-size: 1rem;
+        }
+
+        .task-card-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            padding-top: 0.8rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .desktop-view {
+                display: none;
+            }
+
+            .mobile-view {
+                display: block;
+            }
+
+            .task-container {
+                padding: 1rem;
+                margin: 0.5rem;
+            }
+
+            .page-title {
+                font-size: 1.5rem;
+                margin-bottom: 1.5rem;
+                text-align: center;
+            }
+
+            .priority-filter {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .priority-btn {
+                flex: 1;
+                min-width: calc(50% - 0.5rem);
+                padding: 0.5rem;
+                font-size: 0.9rem;
+                text-align: center;
+            }
+
+            .description-btn {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+
+            .countdown {
+                display: inline-block;
+                padding: 0.4rem 0.8rem;
+                font-size: 0.9rem;
+                border-radius: 4px;
+                background: rgba(0, 0, 0, 0.2);
+                margin-top: 0.3rem;
+            }
+
+            .btn-action {
+                width: 40px;
+                height: 40px;
+            }
+        }
+
+        .btn-edit {
+            color: var(--neon-blue);
+        }
+
+        .btn-edit::before {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        .btn-edit:hover {
+            transform: scale(1.1);
+            text-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        .btn-edit:hover::before {
+            transform: scale(1.2);
+            border-color: transparent;
+            box-shadow: 0 0 20px var(--neon-blue);
+        }
+
+        .btn-edit i {
+            animation: rotate 4s linear infinite;
+        }
+
+        .btn-edit:hover i {
+            animation: rotate 2s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .btn-edit::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(
+                transparent,
+                rgba(0, 195, 255, 0.1),
+                transparent 30%
+            );
+            animation: rotate 4s linear infinite;
+        }
+
+        .btn-edit:hover::after {
+            animation: rotate 2s linear infinite;
+        }
+
+        .task-completed {
+            opacity: 0.7;
+            background: rgba(0, 0, 0, 0.3) !important;
+        }
+
+        .task-completed .task-title {
+            text-decoration: line-through;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .task-completed .priority-badge {
+            opacity: 0.5;
+        }
+
+        .task-completed .countdown {
+            color: rgba(255, 255, 255, 0.5);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .task-completed .btn-action {
+            opacity: 0.5;
+        }
+
+        .task-completed:hover {
+            opacity: 0.8;
+        }
+
+        .task-completed:hover .task-title {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .countdown-completed {
+            color: var(--neon-green);
+            border-color: rgba(0, 255, 159, 0.3);
+            text-shadow: 0 0 5px rgba(0, 255, 159, 0.5);
+        }
+
+        .task-completed .countdown-completed {
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+    <div class="container">
+        <div class="task-container">
+            <h1 class="page-title">任务列表</h1>
+            <div class="text-end mb-3">
+                <a th:href="@{/task/add}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> 添加新任务
+                </a>
+            </div>
+
+            <!-- 优先级过滤按钮 -->
+            <div class="priority-filter">
+                <a th:href="@{/task/list(priority=0)}" 
+                   class="priority-btn" 
+                   th:classappend="${selectedPriority == 0 ? 'active' : ''}">
+                    全部
+                </a>
+                <a th:href="@{/task/list(priority=3)}" 
+                   class="priority-btn" 
+                   th:classappend="${selectedPriority == 3 ? 'active' : ''}">
+                    高优先级
+                </a>
+                <a th:href="@{/task/list(priority=2)}" 
+                   class="priority-btn" 
+                   th:classappend="${selectedPriority == 2 ? 'active' : ''}">
+                    中优先级
+                </a>
+                <a th:href="@{/task/list(priority=1)}" 
+                   class="priority-btn" 
+                   th:classappend="${selectedPriority == 1 ? 'active' : ''}">
+                    低优先级
+                </a>
+            </div>
+
+            <!-- 桌面端视图 -->
+            <div class="desktop-view">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>任务名称</th>
+                                <th>优先级</th>
+                                <th>截止时间</th>
+                                <th>描述</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="task : ${tasks}" 
+                                th:attr="data-priority=${task.priority}"
+                                th:classappend="${task.completed ? 'task-completed' : ''}">
+                                <td>
+                                    <span class="task-title" th:text="${task.title}"></span>
+                                </td>
+                                <td>
+                                    <span th:if="${task.priority == 3}" class="priority-badge priority-high"></span>
+                                    <span th:if="${task.priority == 2}" class="priority-badge priority-medium"></span>
+                                    <span th:if="${task.priority == 1}" class="priority-badge priority-low"></span>
+                                </td>
+                                <td>
+                                    <span th:data-due-date="${#temporals.format(task.dueDate, 'yyyy-MM-dd HH:mm')}"
+                                          class="countdown"></span>
+                                </td>
+                                <td>
+                                    <button class="description-btn" 
+                                            th:onclick="'showDescription(' + ${task.id} + ')'">
+                                        <i class="fas fa-file-alt"></i> 查看描述
+                                    </button>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <form th:if="${!task.completed}" th:action="@{/task/complete/{id}(id=${task.id})}" 
+                                              method="post" style="display: inline;">
+                                            <button type="submit" class="btn-action btn-complete" title="完成任务">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        </form>
+                                        <form th:if="${task.completed}" th:action="@{/task/uncomplete/{id}(id=${task.id})}" 
+                                              method="post" style="display: inline;">
+                                            <button type="submit" class="btn-action btn-complete" title="取消完成">
+                                                <i class="fas fa-undo"></i>
+                                            </button>
+                                        </form>
+                                        <button type="button" class="btn-action btn-edit" 
+                                                th:onclick="'showEditDueDate(' + ${task.id} + ')'" 
+                                                title="修改截止日期">
+                                            <i class="fas fa-clock-rotate-left"></i>
+                                        </button>
+                                        <form th:action="@{/task/delete/{id}(id=${task.id})}" 
+                                              method="post" style="display: inline;">
+                                            <button type="submit" class="btn-action btn-delete" title="删除任务" 
+                                                    onclick="return confirm('确定要删除这个任务吗？')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 移动端视图 -->
+            <div class="mobile-view">
+                <div class="task-cards">
+                    <div th:each="task : ${tasks}" 
+                         class="task-card" 
+                         th:attr="data-priority=${task.priority}"
+                         th:classappend="${task.completed ? 'task-completed' : ''}">
+                        <div class="task-card-header">
+                            <h3 class="task-card-title" th:text="${task.title}"></h3>
+                            <div class="task-card-priority">
+                                <span th:if="${task.priority == 3}" class="priority-badge priority-high"></span>
+                                <span th:if="${task.priority == 2}" class="priority-badge priority-medium"></span>
+                                <span th:if="${task.priority == 1}" class="priority-badge priority-low"></span>
+                            </div>
+                        </div>
+                        <div class="task-card-body">
+                            <div class="task-card-info">
+                                <div>
+                                    <span class="task-card-label">截止时间：</span>
+                                    <span class="countdown" 
+                                          th:data-due-date="${#temporals.format(task.dueDate, 'yyyy-MM-dd HH:mm')}"></span>
+                                </div>
+                            </div>
+                            <button class="description-btn" 
+                                    th:onclick="'showDescription(' + ${task.id} + ')'">
+                                <i class="fas fa-file-alt"></i> 查看描述
+                            </button>
+                        </div>
+                        <div class="task-card-actions">
+                            <form th:if="${!task.completed}" th:action="@{/task/complete/{id}(id=${task.id})}" 
+                                  method="post" style="display: inline;">
+                                <button type="submit" class="btn-action btn-complete" title="完成任务">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </form>
+                            <form th:if="${task.completed}" th:action="@{/task/uncomplete/{id}(id=${task.id})}" 
+                                  method="post" style="display: inline;">
+                                <button type="submit" class="btn-action btn-complete" title="取消完成">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                            </form>
+                            <button type="button" class="btn-action btn-edit" 
+                                    th:onclick="'showEditDueDate(' + ${task.id} + ')'" 
+                                    title="修改截止日期">
+                                <i class="fas fa-clock-rotate-left"></i>
+                            </button>
+                            <form th:action="@{/task/delete/{id}(id=${task.id})}" 
+                                  method="post" style="display: inline;">
+                                <button type="submit" class="btn-action btn-delete" title="删除任务" 
+                                        onclick="return confirm('确定要删除这个任务吗？')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分页控件 -->
+            <div class="pagination-container" th:if="${totalPages > 0}">
+                <a class="page-btn" 
+                   th:href="@{/task/list(page=1,priority=${selectedPriority})}"
+                   th:disabled="${currentPage == 1}"
+                   title="首页">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+                <a class="page-btn" 
+                   th:href="@{/task/list(page=${currentPage - 1},priority=${selectedPriority})}"
+                   th:disabled="${currentPage == 1}"
+                   title="上一页">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+                
+                <th:block th:each="pageNum : ${#numbers.sequence(1, totalPages)}">
+                    <a th:if="${pageNum >= currentPage - 2 && pageNum <= currentPage + 2}"
+                       class="page-btn" 
+                       th:classappend="${pageNum == currentPage ? 'active' : ''}"
+                       th:href="@{/task/list(page=${pageNum},priority=${selectedPriority})}"
+                       th:text="${pageNum}">
+                    </a>
+                </th:block>
+                
+                <a class="page-btn" 
+                   th:href="@{/task/list(page=${currentPage + 1},priority=${selectedPriority})}"
+                   th:disabled="${currentPage == totalPages}"
+                   title="下一页">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+                <a class="page-btn" 
+                   th:href="@{/task/list(page=${totalPages},priority=${selectedPriority})}"
+                   th:disabled="${currentPage == totalPages}"
+                   title="末页">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 任务描述模态框 -->
+    <div class="modal fade" id="descriptionModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">任务描述</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <textarea id="descriptionText" class="description-textarea"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveDescription()">保存更改</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改截止日期模态框 -->
+    <div class="modal fade" id="editDueDateModal" tabindex="-1" aria-labelledby="editDueDateModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editDueDateModalLabel">修改截止日期</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editDueDateForm">
+                        <input type="hidden" id="editTaskId">
+                        <div class="mb-3">
+                            <label for="editDueDate" class="form-label">截止日期</label>
+                            <input type="date" class="form-control" id="editDueDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editDueTime" class="form-label">截止时间</label>
+                            <input type="time" class="form-control" id="editDueTime" value="23:59" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveDueDate()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script>
+        const particlesConfig = {
+            "particles": {
+                "number": {
+                    "value": 80,
+                    "density": {
+                        "enable": true,
+                        "value_area": 800
+                    }
+                },
+                "color": {
+                    "value": "#00c3ff"
+                },
+                "shape": {
+                    "type": "circle"
+                },
+                "opacity": {
+                    "value": 0.5,
+                    "random": false
+                },
+                "size": {
+                    "value": 3,
+                    "random": true
+                },
+                "line_linked": {
+                    "enable": true,
+                    "distance": 150,
+                    "color": "#00c3ff",
+                    "opacity": 0.4,
+                    "width": 1
+                },
+                "move": {
+                    "enable": true,
+                    "speed": 2,
+                    "direction": "none",
+                    "random": false,
+                    "straight": false,
+                    "out_mode": "out",
+                    "bounce": false
+                }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": {
+                    "onhover": {
+                        "enable": true,
+                        "mode": "grab"
+                    },
+                    "onclick": {
+                        "enable": true,
+                        "mode": "push"
+                    },
+                    "resize": true
+                }
+            },
+            "retina_detect": true
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            particlesJS('particles-js', particlesConfig);
+            updateCountdowns();
+            setInterval(updateCountdowns, 1000);
+        });
+
+        let currentTaskId = null;
+        const descriptionModal = new bootstrap.Modal(document.getElementById('descriptionModal'));
+
+        function showDescription(taskId) {
+            currentTaskId = taskId;
+            fetch(`/task/${taskId}/description`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('获取描述失败');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    document.getElementById('descriptionText').value = data.description || '';
+                    descriptionModal.show();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('获取任务描述时出错：' + error.message);
+                });
+        }
+
+        function saveDescription() {
+            if (!currentTaskId) return;
+
+            const description = document.getElementById('descriptionText').value;
+            const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
+            const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
+
+            if (!csrfToken || !csrfHeader) {
+                alert('CSRF token not found. Please refresh the page.');
+                return;
+            }
+
+            const headers = {
+                'Content-Type': 'application/json',
+                [csrfHeader]: csrfToken
+            };
+
+            fetch(`/task/${currentTaskId}/description`, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({ description: description })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('保存失败');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    descriptionModal.hide();
+                    alert('描述保存成功！');
+                } else {
+                    throw new Error(data.error || '保存失败');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('保存任务描述时出错：' + error.message);
+            });
+        }
+
+        function updateCountdowns() {
+            const now = new Date();
+            document.querySelectorAll('.countdown').forEach(element => {
+                const dueDate = new Date(element.getAttribute('data-due-date'));
+                const diff = dueDate - now;
+                const isCompleted = element.closest('tr, .task-card')?.classList.contains('task-completed');
+                
+                let countdownText = '';
+                let countdownClass = '';
+                
+                if (isCompleted) {
+                    countdownText = '已完成';
+                    countdownClass = 'countdown-completed';
+                } else if (diff < 0) {
+                    countdownText = '已逾期';
+                    countdownClass = 'countdown-overdue';
+                } else {
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    
+                    if (days === 0) {
+                        if (hours === 0) {
+                            countdownText = `${minutes}分钟`;
+                            countdownClass = 'countdown-today';
+                        } else {
+                            countdownText = `${hours}小时${minutes}分钟`;
+                            countdownClass = 'countdown-today';
+                        }
+                    } else if (days === 1) {
+                        countdownText = `1天${hours}小时${minutes}分钟`;
+                        countdownClass = 'countdown-tomorrow';
+                    } else if (days <= 3) {
+                        countdownText = `${days}天${hours}小时${minutes}分钟`;
+                        countdownClass = 'countdown-soon';
+                    } else {
+                        countdownText = `${days}天${hours}小时${minutes}分钟`;
+                        countdownClass = 'countdown-normal';
+                    }
+                }
+                
+                element.textContent = countdownText;
+                element.className = `countdown ${countdownClass}`;
+            });
+        }
+
+        function showEditDueDate(taskId) {
+            document.getElementById('editTaskId').value = taskId;
+            const modal = new bootstrap.Modal(document.getElementById('editDueDateModal'));
+            
+            // 设置日期输入的最小值为今天
+            const today = new Date();
+            const dateInput = document.getElementById('editDueDate');
+            dateInput.min = today.toISOString().split('T')[0];
+            dateInput.value = today.toISOString().split('T')[0];
+            
+            // 设置时间输入的默认值为23:59
+            const timeInput = document.getElementById('editDueTime');
+            timeInput.value = '23:59';
+            
+            modal.show();
+        }
+
+        function saveDueDate() {
+            const taskId = document.getElementById('editTaskId').value;
+            const dueDate = document.getElementById('editDueDate').value;
+            const dueTime = document.getElementById('editDueTime').value;
+
+            if (!dueDate || !dueTime) {
+                alert('请选择截止日期和时间');
+                return;
+            }
+
+            const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
+            const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
+
+            if (!csrfToken || !csrfHeader) {
+                alert('CSRF token not found. Please refresh the page.');
+                return;
+            }
+
+            fetch('/task/update-due-date', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    [csrfHeader]: csrfToken
+                },
+                body: `taskId=${taskId}&dueDate=${dueDate}&dueTime=${dueTime}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editDueDateModal'));
+                    modal.hide();
+                    location.reload();
+                } else {
+                    throw new Error(data.error || '保存失败');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('修改截止日期时出错：' + error.message);
+            });
+        }
+    </script>
+</body>
+</html> 

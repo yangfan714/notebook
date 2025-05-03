@@ -1,0 +1,78 @@
+:root {
+    --neon-blue: #00c3ff;
+    --neon-pink: #ff00ff;
+    --neon-red: #ff0000;
+    --neon-green: #00ff00;
+    --neon-yellow: #ffff00;
+    --neon-purple: #9d00ff;
+    --neon-orange: #ff6b00;
+    --neon-cyan: #00ffff;
+    --neon-white: #ffffff;
+    --neon-black: #000000;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Courier New', monospace;
+    background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
+    color: var(--neon-white);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.cyberpunk-bg {
+    position: relative;
+    background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
+    min-height: 100vh;
+}
+
+#particles-js {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.container {
+    position: relative;
+    z-index: 1;
+}
+
+/* 添加一些动画效果 */
+@keyframes neonPulse {
+    0% {
+        text-shadow: 0 0 5px var(--neon-blue),
+                     0 0 10px var(--neon-blue),
+                     0 0 15px var(--neon-blue);
+    }
+    50% {
+        text-shadow: 0 0 10px var(--neon-blue),
+                     0 0 20px var(--neon-blue),
+                     0 0 30px var(--neon-blue);
+    }
+    100% {
+        text-shadow: 0 0 5px var(--neon-blue),
+                     0 0 10px var(--neon-blue),
+                     0 0 15px var(--neon-blue);
+    }
+}
+
+.neon-text {
+    animation: neonPulse 2s infinite;
+}
+
+/* 添加一些响应式设计 */
+@media (max-width: 768px) {
+    .login-container {
+        margin: 50px auto;
+        padding: 1rem;
+    }
+    
+    .login-title {
+        font-size: 1.5rem;
+    }
+} 
